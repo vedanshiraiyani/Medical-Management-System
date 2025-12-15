@@ -1,7 +1,7 @@
-import db.DBConnection;
+import ui.Login;
 
 public class Main {
     public static void main(String[] args) {
-        DBConnection.getConnection();
+        new Login().setVisible(true);
     }
 }
