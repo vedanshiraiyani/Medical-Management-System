@@ -74,13 +74,16 @@ public class StockManagement extends JFrame {
         addBtn.addActionListener(e -> addMedicine());
 
         loadStock();
-        setVisible(true); // 🔴 VERY IMPORTANT
+        setVisible(true); //  VERY IMPORTANT
     }
 
     private void addMedicine() {
         try (Connection con = DBConnection.getConnection()) {
 
-            String sql = "INSERT INTO StockTable VALUES (?, ?, ?, ?, ?, ?)";
+            String sql =
+                "INSERT INTO StockBatch (code, name, quant, rate, mrp, exp) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+
             PreparedStatement ps = con.prepareStatement(sql);
 
             ps.setString(1, codeField.getText());
@@ -88,11 +91,13 @@ public class StockManagement extends JFrame {
             ps.setInt(3, Integer.parseInt(qtyField.getText()));
             ps.setDouble(4, Double.parseDouble(rateField.getText()));
             ps.setDouble(5, Double.parseDouble(mrpField.getText()));
-            ps.setString(6, expField.getText());
+
+            // Convert expiry to DATE (YYYY-MM-DD)
+            ps.setDate(6, java.sql.Date.valueOf(expField.getText()));
 
             ps.executeUpdate();
 
-            JOptionPane.showMessageDialog(this, "Medicine Added");
+            JOptionPane.showMessageDialog(this, "New batch added successfully");
 
             model.setRowCount(0);
             loadStock();
@@ -109,21 +114,30 @@ public class StockManagement extends JFrame {
         }
     }
 
+
+
+
     private void loadStock() {
         try (Connection con = DBConnection.getConnection()) {
 
-            String sql = "SELECT * FROM StockTable";
+            String sql =
+                "SELECT code, name, quant, rate, mrp, exp " +
+                "FROM StockBatch " +
+                "WHERE quant > 0 " +
+                "ORDER BY exp";
+
+
             PreparedStatement ps = con.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
                 model.addRow(new Object[]{
-                        rs.getString("code"),
-                        rs.getString("name"),
-                        rs.getInt("quant"),
-                        rs.getDouble("rate"),
-                        rs.getDouble("mrp"),
-                        rs.getString("exp")
+                    rs.getString("code"),
+                    rs.getString("name"),
+                    rs.getInt("quant"),
+                    rs.getDouble("rate"),
+                    rs.getDouble("mrp"),
+                    rs.getDate("exp")
                 });
             }
 
@@ -131,4 +145,5 @@ public class StockManagement extends JFrame {
             ex.printStackTrace();
         }
     }
+
 }

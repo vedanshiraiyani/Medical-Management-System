@@ -1,6 +1,7 @@
 package ui;
 
 import ui.StockManagement;
+import ui.Billing;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,6 +21,8 @@ public class Dashboard extends JFrame {
         stockBtn.addActionListener(e -> new StockManagement().setVisible(true));
         
         JButton billingBtn = new JButton("Billing");
+        billingBtn.addActionListener(e -> new Billing().setVisible(true));
+
         JButton reportBtn = new JButton("Reports");
         JButton logoutBtn = new JButton("Logout");
 
