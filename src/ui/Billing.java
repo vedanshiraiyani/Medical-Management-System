@@ -58,6 +58,13 @@ public class Billing extends JFrame {
     }
 
     private void generateBill() {
+
+        // 🔹 Basic input validation
+        if (codeField.getText().isEmpty() || qtyField.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Enter medicine code and quantity");
+            return;
+        }
+
         try (Connection con = DBConnection.getConnection()) {
 
             String code = codeField.getText();
@@ -65,7 +72,8 @@ public class Billing extends JFrame {
 
             String fetchSql =
                 "SELECT batch_id, name, quant, mrp " +
-                "FROM StockBatch WHERE code=? AND quant>0 " +
+                "FROM StockBatch " +
+                "WHERE code = ? AND quant > 0 " +
                 "ORDER BY exp";
 
             PreparedStatement ps = con.prepareStatement(fetchSql);
@@ -75,7 +83,9 @@ public class Billing extends JFrame {
             double totalAmount = 0;
             String medicineName = null;
 
+            // 🔹 FEFO stock deduction
             while (rs.next() && qtyNeeded > 0) {
+
                 int batchId = rs.getInt("batch_id");
                 int available = rs.getInt("quant");
                 double mrp = rs.getDouble("mrp");
@@ -86,7 +96,7 @@ public class Billing extends JFrame {
                 qtyNeeded -= used;
 
                 PreparedStatement upd = con.prepareStatement(
-                    "UPDATE StockBatch SET quant=? WHERE batch_id=?");
+                    "UPDATE StockBatch SET quant = ? WHERE batch_id = ?");
                 upd.setInt(1, available - used);
                 upd.setInt(2, batchId);
                 upd.executeUpdate();
@@ -97,14 +107,37 @@ public class Billing extends JFrame {
                 return;
             }
 
+            int soldQty = Integer.parseInt(qtyField.getText());
+            double unitPrice = totalAmount / soldQty;
+
+            // 🔹 Record sale in MedicalReport
+            PreparedStatement reportPs = con.prepareStatement(
+                "INSERT INTO MedicalReport (code, name, quantity, mrp, price, mdate) " +
+                "VALUES (?, ?, ?, ?, ?, ?)");
+
+            reportPs.setString(1, code);
+            reportPs.setString(2, medicineName);
+            reportPs.setInt(3, soldQty);
+            reportPs.setDouble(4, unitPrice);
+            reportPs.setDouble(5, totalAmount);
+            reportPs.setString(6, LocalDate.now().toString());
+
+            reportPs.executeUpdate();
+
+            // 🔹 Update UI
             nameLabel.setText(medicineName);
+            priceLabel.setText(String.valueOf(unitPrice));
             totalLabel.setText(String.valueOf(totalAmount));
 
-            JOptionPane.showMessageDialog(this, "Bill Generated (FEFO)");
+            JOptionPane.showMessageDialog(this, "Bill Generated Successfully (FEFO)");
+
+            // 🔹 Clear inputs
+            codeField.setText("");
+            qtyField.setText("");
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error occurred. Check terminal.");
         }
     }
-
 }
